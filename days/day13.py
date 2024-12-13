@@ -18,11 +18,11 @@ class ClawMachine:
 
         The calculation is a system of linear equations:
 
-        a_button.x*A + b_button.x*B = Vec.x
-        a_button.y*A + b_button.y*B = Vec.y
+        a_button.x*A + b_button.x*B = prize.x
+        a_button.y*A + b_button.y*B = prize.y
 
-        ax(A) + bx(B) = vx
-        ay(A) + by(B) = vy
+        ax(A) + bx(B) = px
+        ay(A) + by(B) = py
         solve for A and B.
 
         C1x + C2y = C3
