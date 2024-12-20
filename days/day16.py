@@ -22,7 +22,7 @@ class Day16(Day):
         maze = self.parse()
         pos = self._find_start(maze)
         work = [(0, pos, EAST)]
-        seen = {(pos, EAST)}
+        seen = {(pos, EAST): 0}
         while work:
             score, pos, direction = heapq.heappop(work)
             if maze[pos.row][pos.col] == 'E':
@@ -30,16 +30,16 @@ class Day16(Day):
 
             # try going straight
             npos = Pos(pos.row + DIRS[direction][0], pos.col + DIRS[direction][1])
-            if (npos, direction) not in seen:
+            if (npos, direction) not in seen or seen[(npos, direction)] > score+1:
                 if maze[npos.row][npos.col] != '#':
-                    seen.add((npos, direction))
+                    seen[(npos, direction)] = score+1
                     heapq.heappush(work, (score + 1, npos, direction))
 
             # and turn left/right
             for delta in (-1, 1):
                 d = (direction + delta) % len(DIRS)
-                if (pos, d) not in seen:
-                    seen.add((pos, d))
+                if (pos, d) not in seen or seen[(pos, d)] > score+1000:
+                    seen[(pos, d)] = score + 1000
                     heapq.heappush(work, (score + 1000, pos, d))
 
         return "dayXX 1"
