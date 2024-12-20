@@ -32,16 +32,21 @@ class Maze:
                 if self.grid[row][col] == '#':
                     continue
                 start_pos = Pos(row, col)
-                for dr, dc in ((-1, 0), (1, 0), (0, 1), (0, -1)):
-                    wall_pos = Pos(start_pos.row+dr, start_pos.col+dc)
-                    if self.grid[wall_pos.row][wall_pos.col] != '#':
-                        continue
-                    for wr, wc in ((-1, 0), (1, 0), (0, 1), (0, -1)):
-                        end_pos = Pos(wall_pos.row+wr, wall_pos.col+wc)
-                        if end_pos == start_pos or end_pos not in self.end_dists:
-                            continue
-                        cheat_dist = self.start_dists[start_pos] + self.end_dists[end_pos] + 2
-                        yield start_pos, end_pos, cheat_dist
+
+                # find all points that are within max_dist manhattan distance of start_pos
+                # and for any of them that are on the path, yield the new total distance
+                for end_pos, manhattan_dist in self.manhattan_points(start_pos, max_dist):
+                    cheat_dist = self.start_dists[start_pos] + self.end_dists[end_pos] + manhattan_dist
+                    yield start_pos, end_pos, cheat_dist
+
+    def manhattan_points(self, start_pos: Pos, max_dist: int) -> Iterable[tuple[Pos, int]]:
+        for dr in range(-max_dist, max_dist+1):
+            for dc in range(-max_dist+abs(dr), max_dist+1-abs(dr)):
+                if dr == 0 and dc == 0:
+                    continue
+                end_pos = Pos(start_pos.row+dr, start_pos.col+dc)
+                if end_pos in self.end_dists:
+                    yield end_pos, abs(dr)+abs(dc)
 
     def _find_dists(self, pos: Pos) -> dict[Pos, int]:
         work = deque([(0, pos)])
