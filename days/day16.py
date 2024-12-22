@@ -1,6 +1,7 @@
 from .day import Day
 from collections import namedtuple
 import heapq
+import random
 
 Pos = namedtuple('Pos', 'row col')
 DIRS = ((1, 0), (0, 1), (-1, 0), (0, -1))
@@ -22,73 +23,47 @@ class Day16(Day):
     def shortest(
             self,
             maze: tuple[tuple[str, ...], ...],
-    ) -> int:
+    ) -> tuple[int, set[Pos]]:
         pos = self._find_start(maze)
-        work = [(0, pos, EAST)]
+        work = [(0, pos, EAST, {pos})]
         seen = {(pos, EAST): 0}
+        best_score = 0
         while work:
-            score, pos, direction = heapq.heappop(work)
+            score, pos, direction, all_positions = heapq.heappop(work)
             if maze[pos.row][pos.col] == 'E':
-                return score
+                if best_score == 0:
+                    best_score = score
+                return score, all_positions
 
-            # try going straight
-            npos = Pos(pos.row + DIRS[direction][0], pos.col + DIRS[direction][1])
-            if (npos, direction) not in seen or seen[(npos, direction)] > score+1:
-                if maze[npos.row][npos.col] != '#':
-                    seen[(npos, direction)] = score+1
-                    heapq.heappush(work, (score + 1, npos, direction))
+            deltas = [-1, 0, 1]
+            random.shuffle(deltas)
 
-            # and turn left/right
-            for delta in (-1, 1):
-                d = (direction + delta) % len(DIRS)
-                if (pos, d) not in seen or seen[(pos, d)] > score+1000:
-                    seen[(pos, d)] = score + 1000
-                    heapq.heappush(work, (score + 1000, pos, d))
+            for delta in deltas:
+                if delta == 0:
+                    # try going straight
+                    npos = Pos(pos.row + DIRS[direction][0], pos.col + DIRS[direction][1])
+                    if (npos, direction) not in seen or seen[(npos, direction)] > score+1:
+                        if maze[npos.row][npos.col] != '#':
+                            seen[(npos, direction)] = score+1
+                            heapq.heappush(work, (score + 1, npos, direction, all_positions|{npos}))
+                else:
+                    # and turn left/right
+                    d = (direction + delta) % len(DIRS)
+                    if (pos, d) not in seen or seen[(pos, d)] > score+1000:
+                        seen[(pos, d)] = score + 1000
+                        heapq.heappush(work, (score + 1000, pos, d, all_positions))
 
     def part1(self) -> str:
-        return str(self.shortest(self.parse()))
-
-    def all_the_shortest(
-            self,
-            maze: tuple[tuple[str, ...], ...],
-            target: int,
-            steps: set[Pos],
-            score: int,
-            pos: Pos,
-            direction: int,
-            answer: set[Pos]
-    ) -> None:
-        my_steps = {pos}
-        my_steps.update(steps)
-        if score > target:
-            return
-        elif score == target:
-            if maze[pos.row][pos.col] == 'E':
-                answer.update(my_steps)
-                print(f"found one - {len(answer)=}")
-            return
-
-        # try going straight
-        npos = Pos(pos.row + DIRS[direction][0], pos.col + DIRS[direction][1])
-        if npos not in my_steps:
-            if maze[npos.row][npos.col] != '#':
-                self.all_the_shortest(maze, target, my_steps, score+1, npos, direction, answer)
-
-        # and turn left/right
-        for delta in (-1, 1):
-            d = (direction + delta) % len(DIRS)
-            npos = Pos(pos.row + DIRS[d][0], pos.col + DIRS[d][1])
-            if npos not in my_steps:
-                if maze[npos.row][npos.col] != '#':
-                    self.all_the_shortest(maze, target, my_steps, score+1001, npos, d, answer)
+        return str(self.shortest(self.parse())[0])
 
     def part2(self) -> str:
-        target = self.shortest()
         maze = self.parse()
-        pos = self._find_start(maze)
-        answer: set[Pos] = set()
-        self.all_the_shortest(maze, target, set(), 0, pos, EAST, answer)
-        return str(len(answer))
+        dist, points = self.shortest(maze)
+        for i in range(1, 1001):
+            print(f"After {i}, {len(points)=}")
+            _, p = self.shortest(maze)
+            points.update(p)
+        return str(len(p))
 
     def parse(self) -> tuple[tuple[str, ...], ...]:
         return tuple([tuple(line) for line in self.data_lines()])
