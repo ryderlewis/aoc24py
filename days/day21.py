@@ -15,32 +15,7 @@ class Keypad(ABC):
         self.keys: dict[Pos, str] = {}
         self.pos = Pos(0, 0)
 
-    def dpad_sequence(self, keys: str) -> str:
-        """
-        Returns one of the dpad sequences that would cause `keys` to be pressed by a robot
-        """
-        ret = []
-        for key in keys:
-            target = self._find_pos(key)
-            while self.pos != target:
-                if self.pos.row != target.row:
-                    if target.row > self.pos.row:
-                        ret.append(DOWN)
-                        self.pos = Pos(self.pos.row+1, self.pos.col)
-                    else:
-                        ret.append(UP)
-                        self.pos = Pos(self.pos.row-1, self.pos.col)
-                else:
-                    if target.col > self.pos.col:
-                        ret.append(RIGHT)
-                        self.pos = Pos(self.pos.row, self.pos.col+1)
-                    else:
-                        ret.append(LEFT)
-                        self.pos = Pos(self.pos.row, self.pos.col-1)
-            ret.append(ACTIVATE)
-        return ''.join(ret)
-
-    def move_and_push(self, key: str) -> Iterable[tuple[str, ...]]:
+    def dpad_sequences(self, key: str) -> Iterable[str]:
         """
         moves current position to the given key, and returns
         an iterable of the various direction options to get there followed by
@@ -51,10 +26,16 @@ class Keypad(ABC):
         # of directions to go, but meh
         work: deque[tuple[Pos, tuple[str, ...]]] = deque([(self.pos, ())])
         self.pos = target
+
         while work:
             pos, steps = work.popleft()
+            if key == 'A':
+                print(f"{pos=}, {steps=}, {target=}")
+
             if pos == target:
-                yield steps + (ACTIVATE,)
+                seq = ''.join(steps + (ACTIVATE,))
+                print(f"yielding {seq=}")
+                yield seq
             else:
                 if target.row != pos.row:
                     if target.row < pos.row:
@@ -65,7 +46,7 @@ class Keypad(ABC):
                         step = DOWN
                     if npos in self.keys:
                         work.append((npos, steps + (step,)))
-                elif target.col != pos.col:
+                if target.col != pos.col:
                     if target.col < pos.col:
                         npos = Pos(pos.row, pos.col-1)
                         step = LEFT
@@ -138,21 +119,31 @@ class Day21(Day):
         self.dir_robot2 = DirectionalKeypad()
         self.dir_robot1 = DirectionalKeypad()
         self.me = DirectionalKeypad()
+        self.pressers = [self.num_robot, self.dir_robot2, self.dir_robot1, self.me]
 
-    def shortest(self, code) -> int:
-        print(f"{code=}")
-        seq1 = self.num_robot.dpad_sequence(code)
-        print(f"{seq1=}")
-        seq2 = self.dir_robot2.dpad_sequence(seq1)
-        print(f"{seq2=}")
-        seq3 = self.dir_robot1.dpad_sequence(seq2)
-        print(f"{seq3=}")
-        return len(seq3)
+    def shortest(self, code: str, pressers: list[Keypad]) -> int:
+        presser, pressers = pressers[0], pressers[1:]
+        if len(pressers) == 0:
+            return len(code)
+
+        dist = 0
+        for key in code:
+            best = None
+            all_seq = list(presser.dpad_sequences(key))
+            print(f"{key=}, {all_seq=}, {len(pressers)=}")
+            for seq in all_seq:
+                count = self.shortest(seq, pressers)
+                if best is None:
+                    best = count
+                else:
+                    best = min(best, count)
+            dist += best
+        return dist
 
     def part1(self) -> str:
         answer = 0
         for code in self.data_lines():
-            dist = self.shortest(code)
+            dist = self.shortest(code, self.pressers)
             mult = int(''.join(c for c in code if c.isnumeric()))
             print(f"{code=}, {dist=}, {mult=}, {dist*mult=}")
             answer += dist * mult
