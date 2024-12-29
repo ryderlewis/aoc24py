@@ -3,6 +3,7 @@ from typing import Iterable
 from .day import Day
 from collections import namedtuple, deque
 from abc import ABC
+from functools import lru_cache
 
 
 Pos = namedtuple('Pos', 'row col')
@@ -112,12 +113,8 @@ class DirectionalKeypad(Keypad):
 class Day21(Day):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.num_robot = NumericKeypad()
-        self.dir_robot2 = DirectionalKeypad()
-        self.dir_robot1 = DirectionalKeypad()
-        self.me = DirectionalKeypad()
-        self.pressers = [self.num_robot, self.dir_robot2, self.dir_robot1, self.me]
 
+    @lru_cache(maxsize=None)
     def shortest(self, code: str, pressers: tuple[Keypad, ...]) -> int:
         presser, pressers = pressers[0], pressers[1:]
         if len(pressers) == 0:
@@ -135,14 +132,17 @@ class Day21(Day):
             dist += best
         return dist
 
-    def part1(self) -> str:
+    def answer(self, num_dpad_robots: int) -> int:
         answer = 0
+        pressers = [NumericKeypad()] + [DirectionalKeypad() for _ in range(num_dpad_robots + 1)]
         for code in self.data_lines():
-            dist = self.shortest(code, tuple(self.pressers))
+            dist = self.shortest(code, tuple(pressers))
             mult = int(''.join(c for c in code if c.isnumeric()))
-            # print(f"{code=}, {dist=}, {mult=}, {dist*mult=}")
             answer += dist * mult
-        return str(answer)
+        return answer
+
+    def part1(self) -> str:
+        return str(self.answer(2))
 
     def part2(self) -> str:
-        return "dayXX 2"
+        return str(self.answer(25))
