@@ -29,12 +29,9 @@ class Keypad(ABC):
 
         while work:
             pos, steps = work.popleft()
-            if key == 'A':
-                print(f"{pos=}, {steps=}, {target=}")
 
             if pos == target:
                 seq = ''.join(steps + (ACTIVATE,))
-                print(f"yielding {seq=}")
                 yield seq
             else:
                 if target.row != pos.row:
@@ -121,7 +118,7 @@ class Day21(Day):
         self.me = DirectionalKeypad()
         self.pressers = [self.num_robot, self.dir_robot2, self.dir_robot1, self.me]
 
-    def shortest(self, code: str, pressers: list[Keypad]) -> int:
+    def shortest(self, code: str, pressers: tuple[Keypad, ...]) -> int:
         presser, pressers = pressers[0], pressers[1:]
         if len(pressers) == 0:
             return len(code)
@@ -129,9 +126,7 @@ class Day21(Day):
         dist = 0
         for key in code:
             best = None
-            all_seq = list(presser.dpad_sequences(key))
-            print(f"{key=}, {all_seq=}, {len(pressers)=}")
-            for seq in all_seq:
+            for seq in presser.dpad_sequences(key):
                 count = self.shortest(seq, pressers)
                 if best is None:
                     best = count
@@ -143,9 +138,9 @@ class Day21(Day):
     def part1(self) -> str:
         answer = 0
         for code in self.data_lines():
-            dist = self.shortest(code, self.pressers)
+            dist = self.shortest(code, tuple(self.pressers))
             mult = int(''.join(c for c in code if c.isnumeric()))
-            print(f"{code=}, {dist=}, {mult=}, {dist*mult=}")
+            # print(f"{code=}, {dist=}, {mult=}, {dist*mult=}")
             answer += dist * mult
         return str(answer)
 
